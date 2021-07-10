@@ -13,6 +13,31 @@
 
 #include <iostream>
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <iostream>
+
+//#include <ncurses.h>
+
+// #include <stdlib.h>
+// #include <unistd.h>
+// #include <fcntl.h>
+// #include <errno.h>
+// #include <linux/input.h>
+// #include <string.h>
+// #include <stdio.h>
+
+// static const char *const evval[3] = {
+//     "RELEASED",
+//     "PRESSED ",
+//     "REPEATED"
+// };
+
 const int INITIAL_WINDOW_WIDTH = 320; //1000;
 const int INITIAL_WINDOW_HEIGHT = 240; //1000;
 
@@ -31,6 +56,26 @@ void cleanUp(SDL_Window* window = nullptr, SDL_Renderer* renderer = nullptr, boo
 }
 
 int main(int argc, char *argv[]) {
+
+    //Uint8* keysArray;
+
+    // const char *dev = "/dev/input/by-path/platform-i8042-serio-0-event-kbd";
+    // struct input_event ev;
+    // ssize_t n;
+    // int fd;
+
+    // fd = open(dev, O_RDONLY);
+    // if (fd == -1) {
+    //     fprintf(stderr, "Cannot open %s: %s.\n", dev, strerror(errno));
+    //     return EXIT_FAILURE;
+    // }
+
+    struct termios oldSettings, newSettings;
+
+    tcgetattr( fileno( stdin ), &oldSettings );
+    newSettings = oldSettings;
+    newSettings.c_lflag &= (~ICANON & ~ECHO);
+    tcsetattr( fileno( stdin ), TCSANOW, &newSettings );  
 
     // CEF settings and config
     CefMessageRouterConfig messageRouterConfig;
@@ -100,21 +145,58 @@ int main(int argc, char *argv[]) {
 
     CefBrowserSettings browserSettings;
     browserSettings.windowless_frame_rate = 60;
-    //browserSettings.background_color = 0; // allows for transparency
+    browserSettings.background_color = 0; // allows for transparency
 
     // Create the browser object to interpret the HTML
-    std::string htmlFile = "file://" + std::string(SDL_GetBasePath()) + "sdl_cef_html.html";
+    // std::string htmlFile = "file://" + std::string(SDL_GetBasePath()) + "sdl_cef_html.html";
+    //std::string htmlFile = "http://8bitcity.com/map";
+    //std::string htmlFile = "http://0.0.0.0:8000/screen1.png";
+    std::string htmlFile = "http://bl.ocks.org/donmccurdy/raw/1d3998a37c73e9435b5503e5f37457be/";
     CefRefPtr<CefBrowser> browser = CefBrowserHost::CreateBrowserSync(window_info,
                                                                       browserClient,
                                                                       htmlFile,
                                                                       browserSettings,
                                                                       nullptr);
 
+/*    struct termios oldSettings, newSettings;
+
+    tcgetattr( fileno( stdin ), &oldSettings );
+    newSettings = oldSettings;
+    newSettings.c_lflag &= (~ICANON & ~ECHO);
+    tcsetattr( fileno( stdin ), TCSANOW, &newSettings );  */
+
+/*    CefMouseEvent event;
+    event.x = 1;
+    event.y = 1;
+    browser->GetHost()->SendMouseClickEvent(event, MBT_LEFT, true, 1);*/
+
+/*    SDL_Event sdlevent = {};
+    sdlevent.type = SDL_MOUSEBUTTONDOWN;
+    sdlevent.button.button = SDL_BUTTON_LEFT;
+    //sdlevent.key.keysym.sym = SDLK_LEFT;
+    SDL_PushEvent(&sdlevent);*/
+
+    //bool flag = false;
+    int count = 0;
+
     while (!browserClient->closeAllowed()) {
 
+        //browser->GetHost()->SendFocusEvent(true);
+
+        //
+        SDL_RaiseWindow(window);
+        SDL_SetWindowGrab(window, SDL_TRUE);
+
+/*        SDL_Event sdlevent = {};
+        sdlevent.type = SDL_MOUSEBUTTONDOWN;
+        sdlevent.button.button = SDL_BUTTON_LEFT;
+        //sdlevent.key.keysym.sym = SDLK_LEFT;
+        SDL_PushEvent(&sdlevent);
+*/
         // send events to browser
         SDL_Event e;
         while (SDL_PollEvent(&e) != 0) {
+            printf("new event %d\n", e.type);
 
             // handle quit and window resize events separately
             if (e.type == SDL_QUIT) {
@@ -130,6 +212,68 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        fd_set set;
+        struct timeval tv;
+
+        tv.tv_sec = 0;
+        tv.tv_usec = 0;
+
+        FD_ZERO( &set );
+        FD_SET( fileno( stdin ), &set );
+
+        int res = select( fileno( stdin )+1, &set, NULL, NULL, &tv );
+
+        if( res > 0 )
+        {
+            //char c;
+            //read( fileno( stdin ), &c, 1 );
+            //printf( "Input available: %c\n", c);
+
+            SDL_Event sdlevent = {};
+
+            char c = std::getchar();
+            printf( "Input available: %c\n", c);
+            switch (c) {
+                case 'j':
+                    //SDL_Event sdlevent = {};
+/*                    sdlevent.type = SDL_MOUSEBUTTONDOWN;
+                    sdlevent.button.button = SDL_BUTTON_LEFT;
+                    //sdlevent.key.keysym.sym = SDLK_LEFT;
+                    SDL_PushEvent(&sdlevent);*/
+                    printf("get j\n");
+                    sdlevent.key.keysym.sym = SDLK_LEFT;
+                    sdlevent.key.state = SDL_PRESSED;
+                    sdlevent.type = SDL_KEYDOWN;
+                    SDL_PushEvent(&sdlevent);
+                    break;
+            }
+
+            //printf( "Input available: %d\n", fgetc(stdin));
+
+            //printf( "Input available: %d\n", getch());
+        }
+        else if( res < 0 )
+        {
+            perror( "select error" );
+            //break;
+        }
+
+        // n = read(fd, &ev, sizeof ev);
+        // if (n == (ssize_t)-1) {
+        //     //if (ev.type == EV_KEY && ev.value >= 0 && ev.value <= 2)
+        //         printf("KEY %s 0x%04x (%d)\n", evval[ev.value], (int)ev.code, (int)ev.code);
+        // }
+
+/*        SDL_PumpEvents();
+
+        // update keyboard state
+        keysArray = const_cast <Uint8*> (SDL_GetKeyboardState(NULL));
+
+        if (keysArray[SDL_SCANCODE_RETURN])
+            printf("MESSAGE: <RETURN> is pressed...\n");
+        if (keysArray[SDL_SCANCODE_RIGHT] && keysArray[SDL_SCANCODE_UP])
+            printf("MESSAGE: Right and Up arrows are pressed...\n");*/
+
         cefApp->doCefWork();
 
         // clear screen
@@ -142,6 +286,20 @@ int main(int argc, char *argv[]) {
 
         // Update screen
         SDL_RenderPresent(renderer);
+
+        if (count < 1000) {
+            SDL_Event sdlevent = {};
+            sdlevent.type = SDL_MOUSEBUTTONDOWN;
+            sdlevent.button.button = SDL_BUTTON_LEFT;
+            sdlevent.button.x = 100;
+            sdlevent.button.y = 100;
+            //sdlevent.key.keysym.sym = SDLK_LEFT;
+            SDL_PushEvent(&sdlevent);
+
+            count++;
+        }
+
+        browser->GetHost()->SendFocusEvent(true);
     }
 
     // clean up

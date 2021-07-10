@@ -387,6 +387,7 @@ void handleKeyEvent(SDL_Event event, CefBrowser *browser) {
 
     /** Fire key events to CEF **/
     if (event.key.state == SDL_PRESSED || event.type == SDL_TEXTINPUT) {
+        printf( "CEF PRESSED %d\n", keyCodes.key_code);
 
         // onkeydown
         CefKeyEvent key_event_key_down;
@@ -410,6 +411,7 @@ void handleKeyEvent(SDL_Event event, CefBrowser *browser) {
             browser->GetHost()->SendKeyEvent(key_event_char);
         }
     } else if (event.key.state == SDL_RELEASED) {
+        printf( "CEF RELEASED\n");
         // onkeyup
         CefKeyEvent key_event_key_up;
         key_event_key_up.type = KEYEVENT_KEYUP;
