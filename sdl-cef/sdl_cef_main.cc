@@ -854,6 +854,60 @@ int GetControlCharacter(KeyboardCode windows_key_code, bool shift) {
   }
 }
 
+/*gint BrowserWindowOsrGtk::ClickEvent(GtkWidget* widget,
+                                     GdkEventButton* event,
+                                     BrowserWindowOsrGtk* self) {*/
+
+gboolean
+on_click (GtkWidget *widget, GdkEventButton* event, CefRefPtr<CefBrowser> *browser) {
+  //REQUIRE_MAIN_THREAD();
+
+  if (!browser->get())
+    return TRUE;
+
+  CefRefPtr<CefBrowserHost> host = (*browser)->GetHost();
+
+  CefBrowserHost::MouseButtonType button_type = MBT_LEFT;
+  switch (event->button) {
+    case 1:
+      break;
+    case 2:
+      button_type = MBT_MIDDLE;
+      break;
+    case 3:
+      button_type = MBT_RIGHT;
+      break;
+    default:
+      // Other mouse buttons are not handled here.
+      return FALSE;
+  }
+
+  CefMouseEvent mouse_event;
+  mouse_event.x = 100; //event->x;
+  mouse_event.y = 100; //event->y;
+  //self->ApplyPopupOffset(mouse_event.x, mouse_event.y);
+  mouse_event.modifiers = GetCefStateModifiers(event->state);
+
+  bool mouse_up = (event->type == GDK_BUTTON_RELEASE);
+  // if (!mouse_up)
+  //   gtk_widget_grab_focus(widget);
+
+  int click_count = 1;
+  switch (event->type) {
+    case GDK_2BUTTON_PRESS:
+      click_count = 2;
+      break;
+    case GDK_3BUTTON_PRESS:
+      click_count = 3;
+      break;
+    default:
+      break;
+  }
+
+  host->SendMouseClickEvent(mouse_event, button_type, mouse_up, click_count);
+  return TRUE;
+}
+
 gboolean
 on_key_press (GtkWidget *widget, GdkEventKey *event, CefRefPtr<CefBrowser> *browser) //gpointer user_data)
 {
@@ -1097,9 +1151,13 @@ int main(int argc, char *argv[]) {
 
     g_signal_connect (G_OBJECT (gtk), "key_press_event", G_CALLBACK (on_key_press), &browser);
     g_signal_connect (G_OBJECT (gtk), "key_release_event", G_CALLBACK (on_key_press), &browser);
+    //g_signal_connect (G_OBJECT (gtk), "button_press_event", G_CALLBACK (on_click), &browser);
+    //g_signal_connect (G_OBJECT (gtk), "button_release_event", G_CALLBACK (on_click), &browser);
 
     //gtk_widget_show_all(gtk);
     //gtk_main();
+
+    //int count = 0;
 
     while (!browserClient->closeAllowed()) {
 
@@ -1139,6 +1197,40 @@ int main(int argc, char *argv[]) {
 
         // Update screen
         SDL_RenderPresent(renderer);
+
+/*        while (4000 < count && count < 5000) {
+
+          //browser->GetHost()->SetFocus(true);
+
+          CefMouseEvent mouse_event;
+          mouse_event.x = 100; //event->x;
+          mouse_event.y = 100; //event->y;
+          //self->ApplyPopupOffset(mouse_event.x, mouse_event.y);
+          //mouse_event.modifiers = GetCefStateModifiers(event->state);
+
+          //bool mouse_up = (event->type == GDK_BUTTON_RELEASE);
+          // if (!mouse_up)
+          //   gtk_widget_grab_focus(widget);
+
+          // int click_count = 1;
+          // switch (event->type) {
+          //   case GDK_2BUTTON_PRESS:
+          //     click_count = 2;
+          //     break;
+          //   case GDK_3BUTTON_PRESS:
+          //     click_count = 3;
+          //     break;
+          //   default:
+          //     break;
+          // }
+
+          browser->GetHost()->SendMouseClickEvent(mouse_event, MBT_LEFT, count % 2 == 0, 2);
+
+
+          //count++;
+        }
+
+        if (count < 10000) count++;*/
     }
 
 
